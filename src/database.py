@@ -31,6 +31,8 @@ class DataBase:
             );
         """)
 
+        await self._save()
+
     async def _save(self):
         await self.connection.commit()
     
