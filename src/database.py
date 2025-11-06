@@ -31,45 +31,100 @@ class DataBase:
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+                                        
+            CREATE INDEX IF NOT EXISTS idx_users_tg_id ON users(tg_id);
+            CREATE INDEX IF NOT EXISTS idx_users_banned ON users(is_banned);
+            CREATE INDEX IF NOT EXISTS idx_users_moderator ON users(is_moderator);
+            CREATE INDEX IF NOT EXISTS idx_users_administrator ON users(is_administrator);
+
+            CREATE INDEX IF NOT EXISTS idx_appeals_user_id ON appeals(user_id);
+            CREATE INDEX IF NOT EXISTS idx_appeals_created_at ON appeals(created_at);
+            CREATE INDEX IF NOT EXISTS idx_appeals_status ON appeals(is_accepted, in_process);
+            CREATE INDEX IF NOT EXISTS idx_appeals_category ON appeals(category_id);
+            CREATE INDEX IF NOT EXISTS idx_appeals_location ON appeals(latitude, longitude);
         """)
 
         await self.save()
 
     async def add_user(self, tg_id: int, tg_username: str):
-        await self.cursor.execute("INSERT OR IGNORE INTO users (tg_id, tg_username) VALUES (?, ?)", (tg_id, tg_username))
+        await self.cursor.execute(
+            "INSERT OR IGNORE INTO users (tg_id, tg_username) VALUES (?, ?)",
+            (tg_id, tg_username)
+        )
+
         await self.save()
         
     async def ban_user(self, tg_id: int):
-        await self.cursor.execute("UPDATE users SET is_banned = 1 WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "UPDATE users SET is_banned = 1 WHERE tg_id = ?",
+            (tg_id, )
+        )
+
         await self.save()
 
     async def unban_user(self, tg_id: int):
-        await self.cursor.execute("UPDATE users SET is_banned = 0 WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "UPDATE users SET is_banned = 0 WHERE tg_id = ?",
+            (tg_id, )
+        )
+
         await self.save()
 
+    async def is_banned(self, tg_id: int) -> bool:
+        await self.cursor.execute(
+            "SELECT is_banned FROM users WHERE tg_id = ?",
+            (tg_id, )
+        )
+
+        result = await self.cursor.fetchone()
+        return result['is_banned'] == 1 if result else False
+
     async def make_moderator(self, tg_id: int):
-        await self.cursor.execute("UPDATE users SET is_moderator = 1 WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "UPDATE users SET is_moderator = 1 WHERE tg_id = ?",
+            (tg_id, )
+        )
+
         await self.save()
 
     async def make_administrator(self, tg_id: int):
-        await self.cursor.execute("UPDATE users SET is_administrator = 1 WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "UPDATE users SET is_administrator = 1 WHERE tg_id = ?",
+            (tg_id, )
+        )
         await self.save()
 
     async def remove_moderator(self, tg_id: int):
-        await self.cursor.execute("UPDATE users SET is_moderator = 0 WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "UPDATE users SET is_moderator = 0 WHERE tg_id = ?",
+            (tg_id, )
+        )
+
         await self.save()
 
     async def remove_administrator(self, tg_id: int):
-        await self.cursor.execute("UPDATE users SET is_administrator = 0 WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "UPDATE users SET is_administrator = 0 WHERE tg_id = ?",
+            (tg_id, )
+        
+        )
         await self.save()
 
     async def is_moderator(self, tg_id: int) -> bool:
-        await self.cursor.execute("SELECT is_moderator FROM users WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "SELECT is_moderator FROM users WHERE tg_id = ?",
+            (tg_id, )
+        )
+
         result = await self.cursor.fetchone()
         return result['is_moderator'] == 1 if result else False
     
     async def is_administrator(self, tg_id: int) -> bool:
-        await self.cursor.execute("SELECT is_administrator FROM users WHERE tg_id = ?", (tg_id, ))
+        await self.cursor.execute(
+            "SELECT is_administrator FROM users WHERE tg_id = ?",
+            (tg_id, )
+        )
+
         result = await self.cursor.fetchone()
         return result['is_administrator'] == 1 if result else False
 
@@ -86,29 +141,50 @@ class DataBase:
         **Ключи словаря**: id, user_id, in_process, is_accepted, category_id, message, photo_id, latitude, longitude, created_at\n
         **Если не найдено**: None
         """
-        await self.cursor.execute("SELECT * FROM appeals WHERE id = ?", (appeal_id, ))
+
+        await self.cursor.execute(
+            "SELECT * FROM appeals WHERE id = ?",
+            (appeal_id, )
+        )
+
         return await self.cursor.fetchone()
 
     async def get_unmoderated_appeals(self) -> list:
         """
         **Ключи словаря**: id, user_id, in_process, is_accepted, category_id, message, photo_id, latitude, longitude, created_at\n
         """
-        await self.cursor.execute("SELECT * FROM appeals WHERE is_accepted = 0 ORDER BY created_at ASC")
+
+        await self.cursor.execute(
+            "SELECT * FROM appeals WHERE is_accepted = 0 ORDER BY created_at ASC"
+        )
+
         return await self.cursor.fetchall()
 
     async def get_moderated_appeals(self) -> list:
         """
         **Ключи словаря**: id, user_id, in_process, is_accepted, category_id, message, photo_id, latitude, longitude, created_at\n
         """
-        await self.cursor.execute("SELECT * FROM appeals WHERE is_accepted = 1 ORDER BY created_at ASC")
+
+        await self.cursor.execute(
+            "SELECT * FROM appeals WHERE is_accepted = 1 ORDER BY created_at ASC"
+        )
+
         return await self.cursor.fetchall()
 
     async def accept_appeal(self, appeal_id: int):
-        await self.cursor.execute("UPDATE appeals SET is_accepted = 1 WHERE id = ?", (appeal_id, ))
+        await self.cursor.execute(
+            "UPDATE appeals SET is_accepted = 1 WHERE id = ?",
+            (appeal_id, )
+        )
+
         await self.save()
 
     async def reject_appeal(self, appeal_id: int):
-        await self.cursor.execute("DELETE FROM appeals WHERE id = ?", (appeal_id, ))
+        await self.cursor.execute(
+            "DELETE FROM appeals WHERE id = ?",
+            (appeal_id, )
+        )
+
         await self.save()
 
     async def save(self):
