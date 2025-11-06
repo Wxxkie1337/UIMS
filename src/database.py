@@ -89,14 +89,14 @@ class DataBase:
         await self.cursor.execute("SELECT * FROM appeals WHERE id = ?", (appeal_id, ))
         return await self.cursor.fetchone()
 
-    async def get_unmoderated_appeals(self) -> list[dict | None]:
+    async def get_unmoderated_appeals(self) -> list:
         """
         **Ключи словаря**: id, user_id, in_process, is_accepted, category_id, message, photo_id, latitude, longitude, created_at\n
         """
         await self.cursor.execute("SELECT * FROM appeals WHERE is_accepted = 0 ORDER BY created_at ASC")
         return await self.cursor.fetchall()
 
-    async def get_moderated_appeals(self) -> list[dict]:
+    async def get_moderated_appeals(self) -> list:
         """
         **Ключи словаря**: id, user_id, in_process, is_accepted, category_id, message, photo_id, latitude, longitude, created_at\n
         """
