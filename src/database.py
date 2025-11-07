@@ -1,15 +1,8 @@
 import aiosqlite
 from typing import Optional, List, Dict, Any
+from utils import singleton, ensure_connected
 
-def ensure_connected(func):
-    async def wrapper(self, *args, **kwargs):
-        if self._connection is None:
-            raise RuntimeError(
-                "База данных не подключена. Вызовите метод connect() перед использованием."
-            )
-        return await func(self, *args, **kwargs)
-    return wrapper
-
+@singleton
 class DataBase:
     # Подключение и управление соединением
 
@@ -203,6 +196,17 @@ class DataBase:
         return bool(result["in_process"]) if result else False
 
     @ensure_connected
+    async def set_in_process(self, appeal_id: int, in_process: bool) -> None:
+        """Помечает обращение как находящееся в процессе выполнения или наоборот.
+
+        Аргументы:
+            appeal_id (int): Уникальный идентификатор обращения.
+            in_process (bool): True - помечает как "в процессе", False - снимает отметку.
+        """
+        await self._cursor.execute("UPDATE appeals SET in_process = ? WHERE id = ?", (int(in_process), appeal_id))
+        await self.save()
+
+    @ensure_connected
     async def create_appeal(
         self,
         tg_id: int,
@@ -244,26 +248,32 @@ class DataBase:
         return dict(result) if result else None
 
     @ensure_connected
-    async def get_unmoderated_appeals(self) -> List[Dict[str, Any]]:
-        """Возвращает все непринятые (неодобренные) обращения.
+    async def get_unmoderated_appeals(self, offset: int, limit: int) -> List[Dict[str, Any]]:
+        """Возвращает все непринятые обращения.
+
+        Аргументы:
+            offset (int): Откуда начинать брать обращения.
+            limit (int): Сколько брать обращений
 
         Возвращает:
             list[dict]: Список обращений в хронологическом порядке (от старых к новым).
         """
-        await self._cursor.execute("SELECT * FROM appeals WHERE is_accepted = 0 ORDER BY created_at ASC")
-
+        await self._cursor.execute("SELECT * FROM appeals WHERE is_accepted = 0 ORDER BY created_at ASC LIMIT ? OFFSET ?", (limit, offset))
         result = await self._cursor.fetchall()
         return [dict(appeal) for appeal in result]
 
     @ensure_connected
-    async def get_moderated_appeals(self) -> List[Dict[str, Any]]:
+    async def get_moderated_appeals(self, offset: int, limit: int) -> List[Dict[str, Any]]:
         """Возвращает все одобренные обращения.
+
+        Аргументы:
+            offset (int): Откуда начинать брать обращения.
+            limit (int): Сколько брать обращений
 
         Возвращает:
             list[dict]: Список обращений в хронологическом порядке (от старых к новым).
         """
-        await self._cursor.execute("SELECT * FROM appeals WHERE is_accepted = 1 ORDER BY created_at ASC")
-
+        await self._cursor.execute("SELECT * FROM appeals WHERE is_accepted = 1 ORDER BY created_at ASC LIMIT ? OFFSET ?", (limit, offset))
         result = await self._cursor.fetchall()
         return [dict(appeal) for appeal in result]
 
@@ -286,3 +296,21 @@ class DataBase:
         """
         await self._cursor.execute("DELETE FROM appeals WHERE id = ?", (appeal_id,))
         await self.save()
+
+    @ensure_connected
+    async def get_appeals_count(self, is_accepted: Optional[bool] = None) -> int:
+        """Возвращает количество обращений.
+        
+        Аргументы:
+            is_accepted (bool | None): Если None - вернёт все обращения
+            
+        Возвращает:
+            int: Количество обращений
+        """
+        if is_accepted is None:
+            await self._cursor.execute("SELECT COUNT(*) FROM appeals")
+        else:
+            await self._cursor.execute("SELECT COUNT(*) FROM appeals WHERE is_accepted = ?", (int(is_accepted),))
+        
+        result = await self._cursor.fetchone()
+        return result[0] if result else 0

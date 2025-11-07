@@ -3,9 +3,9 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from database import DataBase
 from config import BOT_TOKEN, DATABASE_PATH
-# from handlers.user import create_user_router
-# from handlers.admin import create_admin_router
-# from handlers.moderator import create_moderator_router
+# from handlers.user import user_router
+# from handlers.admin import admin_router
+# from handlers.moderator import moderator_router
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
