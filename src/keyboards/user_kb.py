@@ -15,11 +15,11 @@ CATEGORIES = [
     ("🚧 Дороги и тротуары", "Дороги"),
     ("🗑 Мусор и уборка", "Мусор"),
     ("💡 Освещение", "Освещение"),
-    ("🚰 Вода / Канализация", "Вода"),
+    ("🚰 Вода / канализация", "Вода"),
     ("🏠 Дом и подъезд", "Дом"),
     ("🚗 Парковка", "Парковка"),
     ("🐕 Животные", "Животные"),
-    ("👥 Соседи / люди", "Люди"),
+    ("👥 Соседи / Люди", "Люди"),
 ]
 
 
@@ -48,17 +48,17 @@ def get_switch_kb(offset: int, max_appeals: int) -> InlineKeyboardMarkup:
                     text=f"📄 {offset}/{max_appeals}", callback_data=Callback.EMPTY
                 ),
                 InlineKeyboardButton(
-                    text="Вперёд ➡️", callback_data=Callback.APPEAL_NEXT
+                    text="➡️ Вперёд", callback_data=Callback.APPEAL_NEXT
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="🏠 В главное меню", callback_data=Callback.MAIN_MENU
+                    text="🗑 Удалить обращение", callback_data=Callback.DELETE_APPEAL
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="❌ Удалить обращение", callback_data=Callback.DELETE_APPEAL
+                    text="🏠 В главное меню", callback_data=Callback.MAIN_MENU
                 )
             ],
         ]

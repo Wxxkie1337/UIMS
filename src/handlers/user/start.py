@@ -15,18 +15,15 @@ database = DataBase()
 @router.message(Command("start"))
 async def handle_start_command(message: Message, state: FSMContext):
     await state.clear()
-    
-    is_moderator    = await database.is_moderator(get_user_id(message))
-    is_admin        = await database.is_administrator(get_user_id(message))
+
+    is_moderator = await database.is_moderator(get_user_id(message))
+    is_admin = await database.is_administrator(get_user_id(message))
 
     msg = await message.answer(
-        "Привет! 👋\n"
-        "Я — помощник ЖК «Янино-1».\n"
-        "Через меня вы можете сообщить о проблеме: утечка, мусор, освещение и т.д.",
-        reply_markup=get_start_kb(
-            is_moderator=is_moderator,
-            is_admin=is_admin
-        ),
+        "<b>Добро пожаловать в помощник ЖК «Янино-1»</b>\n\n"
+        "Здесь вы можете отправить обращение по проблемам на территории комплекса: "
+        "утечки, мусор, освещение и другие вопросы.",
+        reply_markup=get_start_kb(is_moderator=is_moderator, is_admin=is_admin),
     )
 
     await state.update_data(last_bot_message_id=msg.message_id)
@@ -43,22 +40,18 @@ async def handle_main_menu(callback: CallbackQuery, state: FSMContext):
         await state.get_value("last_bot_message_id"),
     )
 
-    is_moderator    = await database.is_moderator(get_user_id(callback))
-    is_admin        = await database.is_administrator(get_user_id(callback))
+    is_moderator = await database.is_moderator(get_user_id(callback))
+    is_admin = await database.is_administrator(get_user_id(callback))
 
     await state.clear()
     await answer(
         text=(
-            "Привет! 👋\n"
-            "Я — помощник ЖК «Янино-1».\n"
-            "Через меня вы можете сообщить о проблеме: утечка, мусор, освещение и т.д."
+            "<b>Главное меню</b>\n\n"
+            "Выберите действие: создайте новое обращение или проверьте ранее отправленные."
         ),
         message=callback.message,
         state=state,
-        reply_markup=get_start_kb(
-            is_moderator=is_moderator,
-            is_admin=is_admin
-        ),
+        reply_markup=get_start_kb(is_moderator=is_moderator, is_admin=is_admin),
     )
 
 

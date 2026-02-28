@@ -18,15 +18,15 @@ async def cancel_appeal_flow(message: Message, state: FSMContext):
             await delete_message(message.bot, get_chat_id(message), msg_id)
         await state.clear()
         msg = await message.answer(
-            "Обращение отменено. Всего доброго! 👋",
+            "✅ <b>Обращение отменено</b>\nВы можете вернуться в главное меню и создать новое обращение.",
             reply_markup=g_main_menu_kb,
         )
         await state.update_data(last_bot_message_id=msg.message_id)
     else:
         await answer(
-            text="Нет активного обращения.",
+            text="ℹ️ <b>Активное обращение не найдено</b>\nСейчас отменять нечего.",
             message=message,
-            state=state
+            state=state,
         )
 
 

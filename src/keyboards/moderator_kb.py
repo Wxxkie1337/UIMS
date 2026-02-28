@@ -15,16 +15,14 @@ m_menu_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="📂 Посмотреть обращения",
-                callback_data=Callback.M_CHECK_APPEALS
+                text="📂 Новые обращения", callback_data=Callback.M_CHECK_APPEALS
             )
         ],
         [
             InlineKeyboardButton(
-                text="🏠 Выйти из режима модератора",
-                callback_data=Callback.MAIN_MENU
+                text="🏠 В главное меню", callback_data=Callback.MAIN_MENU
             )
-        ]
+        ],
     ]
 )
 
@@ -32,18 +30,19 @@ m_confirm_reason_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="✅ Принять",
-                callback_data=Callback.M_ACCEPT_REASON
+                text="✅ Подтвердить", callback_data=Callback.M_ACCEPT_REASON
             ),
             InlineKeyboardButton(
-                text="❌ Отклонить",
-                callback_data=Callback.M_CANCEL_REASON
-            )
+                text="↩️ Отменить", callback_data=Callback.M_CANCEL_REASON
+            ),
         ]
     ]
 )
 
-def get_unmoderated_appeal_kb(offset: int, total_appeals: int, latitude: float, longitude: float):
+
+def get_unmoderated_appeal_kb(
+    offset: int, total_appeals: int, latitude: float, longitude: float
+):
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -54,7 +53,7 @@ def get_unmoderated_appeal_kb(offset: int, total_appeals: int, latitude: float, 
                     text=f"📄 {offset}/{total_appeals}", callback_data=Callback.EMPTY
                 ),
                 InlineKeyboardButton(
-                    text="Вперёд ➡️", callback_data=Callback.M_APPEAL_NEXT
+                    text="➡️ Вперёд", callback_data=Callback.M_APPEAL_NEXT
                 ),
             ],
             [
@@ -69,19 +68,15 @@ def get_unmoderated_appeal_kb(offset: int, total_appeals: int, latitude: float, 
             ],
             [
                 InlineKeyboardButton(
-                    text="✅ Принять",
-                    callback_data=Callback.M_ACCEPT_APPEAL
+                    text="✅ Принять", callback_data=Callback.M_ACCEPT_APPEAL
                 ),
-                
                 InlineKeyboardButton(
-                    text="❌ Отклонить",
-                    callback_data=Callback.M_REJECT_APPEAL
-                )
+                    text="❌ Отклонить", callback_data=Callback.M_REJECT_APPEAL
+                ),
             ],
             [
                 InlineKeyboardButton(
-                    text="🏠 В главное меню",
-                    callback_data=Callback.MAIN_MENU
+                    text="🏠 В главное меню", callback_data=Callback.MAIN_MENU
                 )
             ],
         ]

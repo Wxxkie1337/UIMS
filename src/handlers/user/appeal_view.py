@@ -1,3 +1,4 @@
+import html
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -37,15 +38,27 @@ async def get_formatted_text(user_id: int, offset: int, state: FSMContext):
         status = "📋 В очереди"
     elif appeal.get("in_process"):
         status = "🛠 В работе"
+    elif appeal.get("is_rejected"):
+        status = "❌ Отклонено"
+
+    reject_block = ""
+    if appeal.get("is_rejected"):
+        reject_reason = appeal.get("reject_reason") or "Причина не указана."
+        reject_block = (
+            "\n\n" "❌ <b>Причина отклонения:</b>\n" f"{html.escape(reject_reason)}"
+        )
+
+    caption = (
+        f"📌 <b>Статус:</b> {status}\n\n"
+        f"📅 <b>Дата:</b> {appeal['created_at']}\n"
+        f"🗂 <b>Категория:</b> {appeal['category']}\n"
+        f"📝 <b>Описание:</b> {appeal['message']}"
+        f"{reject_block}"
+    )
 
     return {
         "photo": appeal["photo_id"],
-        "caption": (
-            f"📌 <b>Статус:</b> {status}\n\n"
-            f"📅 <b>Дата:</b> {appeal['created_at']}\n"
-            f"🗂 <b>Категория:</b> {appeal['category']}\n"
-            f"📝 <b>Описание:</b> {appeal['message']}"
-        ),
+        "caption": caption,
         "reply_markup": get_switch_kb(offset + 1, total),
         "parse_mode": "HTML",
     }
@@ -58,7 +71,7 @@ async def switch_appeals(callback: CallbackQuery, state: FSMContext, page: int):
     data = await get_formatted_text(get_user_id(callback), page, state)
     if not data:
         await answer(
-            text="У вас пока нет обращений.",
+            text="ℹ️ <b>Обращений пока нет</b>\nСоздайте первое обращение из главного меню.",
             message=callback.message,
             state=state,
             reply_markup=g_main_menu_kb,
@@ -117,7 +130,7 @@ async def handle_reject_appeal(callback: CallbackQuery, state: FSMContext):
     if last_appeal_id is None:
         return
 
-    await database.reject_appeal(last_appeal_id)
+    await database.delete_appeal(last_appeal_id)
     await state.update_data(last_appeal_id=None)
 
     await handle_view_appeals(callback, state)

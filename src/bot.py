@@ -10,10 +10,7 @@ from handlers import moderator_router, user_router
 
 
 async def main() -> None:
-    bot = Bot(
-        token=BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode="HTML")
-    )
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
     dispatcher = Dispatcher(storage=MemoryStorage())
 
     database = DataBase()
