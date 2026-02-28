@@ -1,12 +1,4 @@
-"""
-
-!!!!!!!!!!!!!!!!!!!!!!
-сделать свап обращений
-!!!!!!!!!!!!!!!!!!!!!!
-
-"""
-
-
+import html
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -81,20 +73,21 @@ async def switch_appeals(callback: CallbackQuery, state: FSMContext, page: int):
 @router.callback_query(F.data == Callback.MODERATOR_MENU)
 async def handle_menu(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
+    
     user_id = get_user_id(callback)
     chat_id = get_chat_id(callback)
     
+    callback_message_id = callback.message.message_id if callback.message else None
+    last_bot_message_id = await state.get_value("last_bot_message_id")
+    
     await state.set_state(ModeratorStates.moderator_view)
     
-    if callback.message:
-        try:
-            await callback.message.delete()
-        except TelegramBadRequest:
-            pass
-        
-    await delete_message(
-        callback.bot, chat_id, await state.get_value("last_bot_message_id")
-    )
+    await delete_message(callback.bot, chat_id, callback_message_id)
+    if last_bot_message_id != callback_message_id:
+        await delete_message(callback.bot, chat_id, last_bot_message_id)
+
+    if callback_message_id or last_bot_message_id:
+        await state.update_data(last_bot_message_id=None)
 
     if not await database.is_moderator(user_id):
         await answer(
@@ -131,7 +124,10 @@ async def reject_appeal(callback: CallbackQuery, state: FSMContext):
     
     #await database.reject_appeal(appeal_id)
     
-    write_reason = await callback.message.answer("Напишите причину отказа")
+    write_reason = await callback.message.answer(
+        "<b>✏️ Причина отклонения</b>\n\n"
+        "Введите причину отказа по обращению."
+    )
     
     await state.update_data(m_write_reason_id=write_reason.message_id)
     await state.set_state(ModeratorStates.input_reason)
@@ -146,10 +142,17 @@ async def get_reason(message: Message, state: FSMContext):
     await state.update_data(reason_msg=msg)
     
     wait_confirm_msg = await message.answer(
-        text=f"Подтвердите отклонение обращения с подписью\n'''{msg}''''",
+        text=(
+            "<b>⚠️ Подтверждение отклонения обращения</b>\n\n"
+            "Проверьте подпись ниже и подтвердите действие:\n\n"
+            f"<code>{html.escape(msg)}</code>"
+        ),
         reply_markup=m_confirm_reason_kb
     )
-    await state.update_data(m_wait_reason_id=wait_confirm_msg.message_id)
+    await state.update_data(
+        reason_msg=message.text,
+        m_wait_reason_id=wait_confirm_msg.message_id
+    )
     
 
 @router.callback_query(ModeratorStates.input_reason, F.data == Callback.M_ACCEPT_REASON)
@@ -165,6 +168,8 @@ async def accept_reason(callback: CallbackQuery, state: FSMContext):
         callback.message.bot, get_chat_id(callback), await state.get_value("m_wait_reason_id")
     )
     
+    reason_msg = await state.get_value("reason_msg")
+    print(reason_msg)
     await handle_menu(callback, state)
     
     
