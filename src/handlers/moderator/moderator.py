@@ -7,12 +7,13 @@
 """
 
 
+from html import escape
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery, Message
-from aiogram.exceptions import TelegramBadRequest
 
 from db import DataBase
 from handlers.common import answer, delete_message
@@ -29,6 +30,9 @@ class ModeratorStates(StatesGroup):
     moderator_view = State()
     input_reason = State()
 
+
+def _escape_html_text(text: str) -> str:
+    return escape(text)
 
 async def get_formatted_text(offset: int, state: FSMContext):
     appeals = await database.get_unmoderated_appeals(
@@ -64,7 +68,7 @@ async def switch_appeals(callback: CallbackQuery, state: FSMContext, page: int):
     data = await get_formatted_text(page, state)
     if not data:
         await answer(
-            text="Обращения не найдены\nВыберите ваше действие:",
+            text="<b>Обращения не найдены.</b>\nВыберите действие:",
             message=callback.message,
             state=state,
             reply_markup=m_menu_kb
@@ -83,22 +87,23 @@ async def handle_menu(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     user_id = get_user_id(callback)
     chat_id = get_chat_id(callback)
+    callback_message_id = callback.message.message_id if callback.message else None
+    last_bot_message_id = await state.get_value("last_bot_message_id")
     
     await state.set_state(ModeratorStates.moderator_view)
-    
-    if callback.message:
-        try:
-            await callback.message.delete()
-        except TelegramBadRequest:
-            pass
-        
-    await delete_message(
-        callback.bot, chat_id, await state.get_value("last_bot_message_id")
-    )
+
+    # Удаляем сообщение с кнопкой меню и последнее сообщение бота.
+    # Если это одно и то же сообщение, удаляем только один раз.
+    await delete_message(callback.bot, chat_id, callback_message_id)
+    if last_bot_message_id != callback_message_id:
+        await delete_message(callback.bot, chat_id, last_bot_message_id)
+
+    if callback_message_id or last_bot_message_id:
+        await state.update_data(last_bot_message_id=None)
 
     if not await database.is_moderator(user_id):
         await answer(
-            text="У вас нет прав для использования данной команды.",
+            text="<b>Недостаточно прав</b> для использования этой команды.",
             message=callback.message,
             state=state,
             reply_markup=g_main_menu_kb,
@@ -106,7 +111,7 @@ async def handle_menu(callback: CallbackQuery, state: FSMContext):
         return
 
     await answer(
-        text="Выберите ваше действие:",
+        text="<b>Выберите действие:</b>",
         message=callback.message,
         state=state,
         reply_markup=m_menu_kb
@@ -131,7 +136,7 @@ async def reject_appeal(callback: CallbackQuery, state: FSMContext):
     
     #await database.reject_appeal(appeal_id)
     
-    write_reason = await callback.message.answer("Напишите причину отказа")
+    write_reason = await callback.message.answer("<b>Введите причину отказа:</b>")
     
     await state.update_data(m_write_reason_id=write_reason.message_id)
     await state.set_state(ModeratorStates.input_reason)
@@ -145,9 +150,13 @@ async def get_reason(message: Message, state: FSMContext):
     await message.delete()
     await state.update_data(reason_msg=msg)
     
+    escaped_reason = _escape_html_text(msg)
     wait_confirm_msg = await message.answer(
-        text=f"Подтвердите отклонение обращения с подписью\n'''{msg}''''",
-        reply_markup=m_confirm_reason_kb
+        text=(
+            "<b>Подтвердите отклонение обращения с подписью:</b>\n"
+            f"<pre>{escaped_reason}</pre>"
+        ),
+        reply_markup=m_confirm_reason_kb,
     )
     await state.update_data(m_wait_reason_id=wait_confirm_msg.message_id)
     
