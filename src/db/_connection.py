@@ -1,73 +1,60 @@
-import aiosqlite
+import asyncpg
 
 from utils.decorators import ensure_connected
 
 
 class ConnectionMixin:
-    async def connect(self, database_path: str) -> None:
-        self._connection = await aiosqlite.connect(database_path)
-        self._cursor = await self._connection.cursor()
-        self._cursor.row_factory = aiosqlite.Row
+    _connection = None
 
-        await self._cursor.execute("PRAGMA foreign_keys = ON")
-        await self._cursor.executescript(
+    async def connect(self, database_url: str) -> None:
+        self._connection = await asyncpg.create_pool(dsn=database_url)
+
+        statements = (
             """
             CREATE TABLE IF NOT EXISTS users (
-                tg_id INTEGER PRIMARY KEY,
-                is_banned BOOLEAN DEFAULT 0,
-                is_moderator BOOLEAN DEFAULT 0,
-                is_administrator BOOLEAN DEFAULT 0
-            );
-
+                tg_id BIGINT PRIMARY KEY,
+                is_banned BOOLEAN DEFAULT FALSE,
+                is_moderator BOOLEAN DEFAULT FALSE,
+                is_administrator BOOLEAN DEFAULT FALSE
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS appeals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                in_process BOOLEAN DEFAULT 0,
-                is_accepted BOOLEAN DEFAULT 0,
-                is_rejected BOOLEAN DEFAULT 0,
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                in_process BOOLEAN DEFAULT FALSE,
+                is_accepted BOOLEAN DEFAULT FALSE,
+                is_rejected BOOLEAN DEFAULT FALSE,
                 category TEXT,
                 message TEXT,
                 reject_reason TEXT,
                 photo_id TEXT,
                 geo_text TEXT,
-                latitude REAL,
-                longitude REAL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                created_at TIMESTAMP DEFAULT NOW(),
                 FOREIGN KEY (user_id) REFERENCES users(tg_id)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_users_tg_id
-                ON users(tg_id);
-
-            CREATE INDEX IF NOT EXISTS idx_users_banned
-                ON users(is_banned);
-
-            CREATE INDEX IF NOT EXISTS idx_users_moderator
-                ON users(is_moderator);
-
-            CREATE INDEX IF NOT EXISTS idx_users_administrator
-                ON users(is_administrator);
-
-            CREATE INDEX IF NOT EXISTS idx_appeals_user_id
-                ON appeals(user_id);
-
-            CREATE INDEX IF NOT EXISTS idx_appeals_created_at
-                ON appeals(created_at);
-
-            CREATE INDEX IF NOT EXISTS idx_appeals_status
-                ON appeals(is_accepted, in_process, is_rejected);
-
-            CREATE INDEX IF NOT EXISTS idx_appeals_location
-                ON appeals(latitude, longitude);
-            """
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_users_tg_id ON users(tg_id)",
+            "CREATE INDEX IF NOT EXISTS idx_users_banned ON users(is_banned)",
+            "CREATE INDEX IF NOT EXISTS idx_users_moderator ON users(is_moderator)",
+            "CREATE INDEX IF NOT EXISTS idx_users_administrator ON users(is_administrator)",
+            "CREATE INDEX IF NOT EXISTS idx_appeals_user_id ON appeals(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_appeals_created_at ON appeals(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_appeals_status ON appeals(is_accepted, in_process, is_rejected)",
+            "CREATE INDEX IF NOT EXISTS idx_appeals_location ON appeals(latitude, longitude)",
         )
-        await self.save()
+
+        async with self._connection.acquire() as conn:
+            for statement in statements:
+                await conn.execute(statement)
 
     @ensure_connected
     async def close(self) -> None:
         await self._connection.close()
+        self._connection = None
 
     @ensure_connected
     async def save(self) -> None:
-        await self._connection.commit()
+        return None

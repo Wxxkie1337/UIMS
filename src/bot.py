@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from config import BOT_TOKEN, DATABASE_PATH
+from config import BOT_TOKEN, DATABASE_URL
 from db import DataBase
 from handlers import moderator_router, user_router, admin_router
 
@@ -14,7 +14,7 @@ async def main() -> None:
     dispatcher = Dispatcher(storage=MemoryStorage())
 
     database = DataBase()
-    await database.connect(DATABASE_PATH)
+    await database.connect(DATABASE_URL)
 
     dispatcher.include_router(user_router)
     dispatcher.include_router(moderator_router)
