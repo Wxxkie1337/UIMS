@@ -18,7 +18,7 @@ async def handle_start_command(message: Message, state: FSMContext):
     await state.clear()
 
     user_id = get_user_id(message)
-    if user_id == OWNER_ID:
+    if user_id == int(OWNER_ID):
         await database.make_administrator(user_id)
         await database.make_moderator(user_id)
         
