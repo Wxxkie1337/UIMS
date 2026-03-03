@@ -15,6 +15,7 @@ load_dotenv("./data/.env")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_PATH = os.getenv("DATABASE_PATH")
+OWNER_ID = os.getenv("OWNER_ID")
 
 if not BOT_TOKEN or not DATABASE_PATH:
     raise ValueError("Заполните .env файл!")

@@ -7,6 +7,7 @@ from db import DataBase
 from handlers.common import cancel_appeal_flow, delete_message, answer
 from keyboards.global_kb import Callback, get_start_kb
 from utils import get_chat_id, get_user_id
+from config import OWNER_ID
 
 router = Router()
 database = DataBase()
@@ -16,8 +17,13 @@ database = DataBase()
 async def handle_start_command(message: Message, state: FSMContext):
     await state.clear()
 
-    is_moderator = await database.is_moderator(get_user_id(message))
-    is_admin = await database.is_administrator(get_user_id(message))
+    user_id = get_user_id(message)
+    if user_id == OWNER_ID:
+        await database.make_administrator(user_id)
+        await database.make_moderator(user_id)
+        
+    is_moderator = await database.is_moderator(user_id)
+    is_admin = await database.is_administrator(user_id)
 
     msg = await message.answer(
         "<b>Добро пожаловать в помощник ЖК «Янино-1»</b>\n\n"
