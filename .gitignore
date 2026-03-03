@@ -1,0 +1,43 @@
+# Virtual environment
+venv/
+.env/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Database files (explicitly)
+bot/database.db
+database.db
+
+# Python packaging
+*.egg-info/
+dist/
+build/
