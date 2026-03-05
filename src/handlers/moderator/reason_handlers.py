@@ -4,7 +4,7 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from handlers.common import delete_message
+from handlers.common import delete_message, update_last_message, update_message
 from keyboards.global_kb import Callback, g_view_appeals_kb
 from keyboards.moderator_kb import m_confirm_reason_kb
 from utils import get_chat_id
@@ -85,3 +85,6 @@ async def accept_reason(callback: CallbackQuery, state: FSMContext):
         page = max(0, p - 1)
 
     await check_appeals(callback, state, start_page=page)
+
+
+

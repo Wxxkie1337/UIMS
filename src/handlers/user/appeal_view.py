@@ -5,10 +5,10 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 from db import DataBase
-from handlers.common import answer
+from handlers.common import answer, update_last_message, update_message
 from keyboards.global_kb import Callback, g_main_menu_kb
 from keyboards.user_kb import get_switch_kb
-from utils import get_user_id
+from utils import get_user_id, get_chat_id, format_datetime
 
 router = Router()
 database = DataBase()
@@ -55,7 +55,7 @@ async def get_formatted_text(user_id: int, offset: int, state: FSMContext):
 
     caption = (
         f"📌 <b>Статус:</b> {status}\n\n"
-        f"📅 <b>Дата:</b> {appeal['created_at']}\n"
+        f"📅 <b>Дата:</b> {format_datetime(appeal['created_at'])}\n"
         f"🗂 <b>Категория:</b> {appeal['category']}\n"
         f"📝 <b>Описание:</b> {appeal['message']}"
         f"{address_block}"
@@ -64,28 +64,34 @@ async def get_formatted_text(user_id: int, offset: int, state: FSMContext):
 
     return {
         "photo": appeal["photo_id"],
-        "caption": caption,
-        "reply_markup": get_switch_kb(offset + 1, total),
-        "parse_mode": "HTML",
+        "text": caption,
+        "reply_markup": get_switch_kb(offset + 1, total)
     }
 
 
 async def switch_appeals(callback: CallbackQuery, state: FSMContext, page: int):
     await callback.answer()
-    await callback.message.delete()
 
     data = await get_formatted_text(get_user_id(callback), page, state)
     if not data:
-        await answer(
+        msg = await update_message(
+            bot=callback.message.bot,
+            chat_id=get_chat_id(callback),
+            message_id=await state.get_value("last_bot_message_id"),
             text="ℹ️ <b>Обращений пока нет</b>\nСоздайте первое обращение из главного меню.",
-            message=callback.message,
-            state=state,
-            reply_markup=g_main_menu_kb,
+            reply_markup=g_main_menu_kb
         )
+        await update_last_message(state, msg)
         return
-
-    msg = await callback.message.answer_photo(**data)
-    await state.update_data(last_bot_message_id=msg.message_id, page=page)
+    
+    msg = await update_message(
+        bot=callback.message.bot,
+        chat_id=get_chat_id(callback),
+        message_id=await state.get_value("last_bot_message_id"),
+        **data
+    )
+    await update_last_message(state, msg)
+    await state.update_data(page=page)
 
 
 @router.message(ViewStates.view_appeals)

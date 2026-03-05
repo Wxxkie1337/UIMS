@@ -1,5 +1,5 @@
 from .decorators import ensure_connected, singleton
-from .misc import get_map_url, get_user_profile_url
+from .misc import get_map_url, get_user_profile_url, format_datetime
 from .telegram import get_chat_id, get_user_id
 
 __all__ = (
@@ -9,4 +9,5 @@ __all__ = (
     "get_map_url",
     "get_user_id",
     "get_chat_id",
+    "format_datetime"
 )

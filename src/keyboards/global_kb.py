@@ -93,7 +93,7 @@ def get_start_kb(is_moderator=False, is_admin=False):
         keyboards.append(
             [
                 InlineKeyboardButton(
-                    text="Режим администратора", callback_data=Callback.ADMIN_MENU
+                    text="🗳 Режим администратора", callback_data=Callback.ADMIN_MENU
                 )
             ]
         )

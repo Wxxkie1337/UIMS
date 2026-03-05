@@ -2,7 +2,7 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
-from handlers.common import answer, cancel_appeal_flow, delete_message
+from handlers.common import answer, cancel_appeal_flow, delete_message, update_last_message, update_message
 from keyboards.global_kb import Callback, g_main_menu_kb
 from keyboards.user_kb import get_finish_kb, u_location_kb
 from utils import get_chat_id, get_user_id
@@ -16,32 +16,28 @@ async def handle_problem_description_input(message: Message, state: FSMContext):
     text = (message.text or "").strip()
 
     if len(text) < 10:
-        await delete_message(
-            message.bot,
-            get_chat_id(message),
-            await state.get_value("last_bot_message_id"),
-        )
-        await answer(
+        msg = await update_message(
+            bot=message.bot,
+            chat_id=get_chat_id(message),
+            message_id=await state.get_value("last_bot_message_id"),
             text=(
                 "❌ <b>Слишком короткое описание</b>\n"
                 "Текст должен содержать минимум 10 символов. Попробуйте снова."
-            ),
-            message=message,
-            state=state,
+            )
         )
+        await update_last_message(state, msg)
         return
 
     await state.update_data(message_text=text)
-    await delete_message(
-        message.bot,
-        get_chat_id(message),
-        await state.get_value("last_bot_message_id"),
+
+    msg = await update_message(
+        bot=message.bot,
+        chat_id=get_chat_id(message),
+        message_id=await state.get_value("last_bot_message_id"),
+        text="<b>Шаг 3 из 4. Фотография</b>\nОтправьте фотографию проблемы."
     )
-    await answer(
-        text="<b>Шаг 3 из 4. Фотография</b>\nОтправьте фотографию проблемы.",
-        message=message,
-        state=state,
-    )
+    await update_last_message(state, msg)
+    
     await state.set_state(AppealStates.photo)
 
 
@@ -50,34 +46,26 @@ async def handle_problem_photo_input(message: Message, state: FSMContext):
     await message.delete()
 
     if not message.photo:
-        await delete_message(
-            message.bot,
-            get_chat_id(message),
-            await state.get_value("last_bot_message_id"),
+        msg = await update_message(
+            bot=message.bot,
+            chat_id=get_chat_id(message),
+            message_id=await state.get_value("last_bot_message_id"),
+            text="❌ <b>Нужна фотография</b>\nПожалуйста, отправьте изображение."
         )
-        await answer(
-            text="❌ <b>Нужна фотография</b>\nПожалуйста, отправьте изображение.",
-            message=message,
-            state=state,
-        )
+        await update_last_message(state, msg)
         return
 
     await state.update_data(file_id=message.photo[-1].file_id)
-    await delete_message(
-        message.bot,
-        get_chat_id(message),
-        await state.get_value("last_bot_message_id"),
-    )
-    
-    await answer(
+    msg = await update_message(
+        bot=message.bot,
+        chat_id=get_chat_id(message),
+        message_id=await state.get_value("last_bot_message_id"),
         text=(
             "<b>Шаг 4 из 4. Геопозиция</b>\n"
-            "Геолокацию через телеграм или введите адрес вручную"
-        ),
-        message=message,
-        state=state,
-        reply_markup=u_location_kb,
+            "Отправьте геолокацию через телеграм или введите адрес вручную"
+        )
     )
+    await update_last_message(state, msg)
     await state.set_state(AppealStates.location)
     
     
@@ -89,17 +77,15 @@ async def handle_address_input(message: Message, state: FSMContext):
     await state.update_data(address_msg=msg, latitude=None, longitude=None)
     data = await state.get_data()
     
-    await delete_message(
-        message.bot,
-        get_chat_id(message),
-        await state.get_value("last_bot_message_id"),
-    )
     await state.set_state(AppealStates.finish)
     
-    msg = await message.answer(
-        "<b>Проверьте данные перед отправкой</b>",
-        reply_markup=ReplyKeyboardRemove(),
+    msg = await update_message(
+        bot=message.bot,
+        chat_id=get_chat_id(message),
+        message_id=await state.get_value("last_bot_message_id"),
+        text="<b>Проверьте данные перед отправкой</b>"
     )
+    await update_last_message(state, msg)
 
     photo = await message.answer_photo(
         photo=data["file_id"],
@@ -112,10 +98,7 @@ async def handle_address_input(message: Message, state: FSMContext):
         reply_markup=get_finish_kb(),
     )
 
-    await state.update_data(
-        last_bot_message_id=msg.message_id,
-        last_bot_photo_id=photo.message_id,
-    )
+    await state.update_data(last_bot_photo_id=photo.message_id)
     
 
 @router.message(AppealStates.location, F.location)
@@ -126,18 +109,16 @@ async def handle_problem_location_input(message: Message, state: FSMContext):
     longitude = message.location.longitude
     await state.update_data(latitude=latitude, longitude=longitude)
     data = await state.get_data()
-
-    await delete_message(
-        message.bot,
-        get_chat_id(message),
-        await state.get_value("last_bot_message_id"),
-    )
+    
     await state.set_state(AppealStates.finish)
-
-    msg = await message.answer(
-        "<b>Проверьте данные перед отправкой</b>",
-        reply_markup=ReplyKeyboardRemove(),
+    
+    msg = await update_message(
+        bot=message.bot,
+        chat_id=get_chat_id(message),
+        message_id=await state.get_value("last_bot_message_id"),
+        text="<b>Проверьте данные перед отправкой</b>"
     )
+    await update_last_message(state, msg)
 
     photo = await message.answer_photo(
         photo=data["file_id"],
@@ -150,10 +131,7 @@ async def handle_problem_location_input(message: Message, state: FSMContext):
         reply_markup=get_finish_kb(latitude, longitude),
     )
 
-    await state.update_data(
-        last_bot_message_id=msg.message_id,
-        last_bot_photo_id=photo.message_id,
-    )
+    await state.update_data(last_bot_photo_id=photo.message_id)
 
 
 @router.message(AppealStates.finish)
@@ -169,7 +147,6 @@ async def handle_appeal_cancel_click(callback: CallbackQuery, state: FSMContext)
         await state.get_value("last_bot_message_id"),
     )
     await callback.answer()
-    await callback.message.delete()
     await cancel_appeal_flow(callback.message, state)
 
 
@@ -181,16 +158,21 @@ async def handle_appeal_confirm_click(callback: CallbackQuery, state: FSMContext
     await delete_message(
         callback.message.bot,
         get_chat_id(callback),
-        data["last_bot_message_id"],
+        data.get("last_bot_photo_id"),
     )
 
     if not data or "category" not in data:
-        await callback.message.answer(
-            "ℹ️ <b>Обращение уже неактуально</b>\n"
-            "Создайте новое обращение из главного меню.",
-            reply_markup=g_main_menu_kb,
+        msg = await update_message(
+            bot=callback.message.bot,
+            chat_id=get_chat_id(callback),
+            message_id=data.get("last_bot_message_id"),
+            text=(
+                "ℹ️ <b>Обращение уже неактуально</b>\n"
+                "Создайте новое обращение из главного меню."
+            ),
+            reply_markup=g_main_menu_kb
         )
-        await state.clear()
+        await update_last_message(state, msg)
         return
 
     await database.create_appeal(
@@ -198,20 +180,20 @@ async def handle_appeal_confirm_click(callback: CallbackQuery, state: FSMContext
         category=data["category"],
         message=data["message_text"],
         photo_id=data["file_id"],
-        geo_text=data["address_msg"],
-        latitude=data["latitude"],
-        longitude=data["longitude"],
+        geo_text=data.get("address_msg"),
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
     )
 
-    await callback.message.delete()
-    await state.clear()
-    await answer(
+    msg = await update_message(
+        bot=callback.message.bot,
+        chat_id=get_chat_id(callback),
+        message_id=await state.get_value("last_bot_message_id"),
         text=(
             "✅ <b>Обращение отправлено</b>\n"
             "Заявка передана на модерацию ЖК «Янино-1».\n"
             "Если понадобятся уточнения, мы свяжемся с вами."
         ),
-        message=callback.message,
-        state=state,
-        reply_markup=g_main_menu_kb,
+        reply_markup=g_main_menu_kb
     )
+    await update_last_message(state, msg)

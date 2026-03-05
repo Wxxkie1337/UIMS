@@ -2,7 +2,7 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from handlers.common import delete_message
+from handlers.common import delete_message, update_last_message
 from keyboards.global_kb import Callback, g_view_appeals_kb
 from utils import get_chat_id
 
@@ -31,8 +31,8 @@ async def accept_appeal(callback: CallbackQuery, state: FSMContext):
         ),
         reply_markup=g_view_appeals_kb,
     )
-
-    await state.update_data(last_bot_message_id=msg.message_id)
+    
+    await update_last_message(state, msg.message_id)
     await database.accept_appeal(appeal_id)
 
     page = 0
