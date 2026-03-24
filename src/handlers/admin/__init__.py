@@ -1,7 +1,4 @@
-from aiogram import Router
+from . import check_moderated_appeals, menu, reject_reason, check_defer_appeals, check_active_appeals, complete_message
+from .shared import router
 
-from .admin import router as admin_router
-
-router = Router()
-
-router.include_router(admin_router)
+__all__ = ("router",)

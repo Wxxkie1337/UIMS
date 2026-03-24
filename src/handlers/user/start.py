@@ -1,63 +1,94 @@
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from config import OWNERS_ID
 from db import DataBase
-from handlers.common import cancel_appeal_flow, delete_message, answer, update_last_message, update_message
 from keyboards.global_kb import Callback, get_start_kb
-from utils import get_chat_id, get_user_id
-from config import OWNER_ID
+from utils.messages import INVALID_INVITE_TEXT, USER_MAIN_MENU_TEXT, WELCOME_TEXT
+from utils.telegram import (
+    notify,
+    update_last_message,
+    UIContext
+)
 
 router = Router()
 database = DataBase()
 
 
-@router.message(Command("start"))
-async def handle_start_command(message: Message, state: FSMContext):
-    user_id = get_user_id(message)
-    if user_id == int(OWNER_ID):
-        await database.make_administrator(user_id)
-        await database.make_moderator(user_id)
-        
-    is_moderator = await database.is_moderator(user_id)
-    is_admin = await database.is_administrator(user_id)
+@router.message(Command("start", "new"))
+async def handle_start_command(message: Message, command: CommandObject, state: FSMContext):
+    await state.set_state(None)
+    
+    ctx = await UIContext.from_message(message, database)
 
-    msg = await message.answer(
-        "<b>Добро пожаловать в помощник ЖК «Янино-1»</b>\n\n"
-        "Здесь вы можете отправить обращение по проблемам на территории комплекса: "
-        "утечки, мусор, освещение и другие вопросы.",
-        reply_markup=get_start_kb(is_moderator=is_moderator, is_admin=is_admin),
+    await database.add_user(ctx.user_id, ctx.username)
+
+    args = command.args
+    if args and args.startswith("invite_"):
+        token = args.split("invite_", 1)[1]
+        role = await database.use_role(token)
+
+        if role == "moderator":
+            await database.make_moderator(ctx.user_id)
+        elif role == "admin":
+            await database.make_admin(ctx.user_id)
+
+        if role is None:
+            await notify(message.bot, ctx.chat_id, INVALID_INVITE_TEXT)
+
+    is_owner = ctx.user_id in OWNERS_ID
+
+    if is_owner:
+        await database.make_admin(ctx.user_id)
+        await database.make_moderator(ctx.user_id)
+
+    is_moderator = await database.is_moderator(ctx.user_id)
+    is_admin = await database.is_admin(ctx.user_id)
+
+    msg = await ctx.send_new(
+        text=WELCOME_TEXT,
+        reply_markup=get_start_kb(
+            is_moderator=is_moderator,
+            is_admin=is_admin,
+            is_owner=is_owner,
+        )
     )
 
-    await state.update_data(last_bot_message_id=msg.message_id)
-    await database.add_user(get_user_id(message))
+    await update_last_message(database, ctx.user_id, msg)
 
 
 @router.callback_query(F.data == Callback.MAIN_MENU)
 async def handle_main_menu(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
+
+    await state.set_state(None)
     
-    is_moderator = await database.is_moderator(get_user_id(callback))
-    is_admin = await database.is_administrator(get_user_id(callback))
+    ctx = await UIContext.from_callback(callback, database)
 
-    msg = await update_message(
-        bot=callback.message.bot,
-        chat_id=get_chat_id(callback),
-        message_id=await state.get_value("last_bot_message_id"),
-        text=(
-            "<b>Главное меню</b>\n\n"
-            "Выберите действие: создайте новое обращение или проверьте ранее отправленные."
-        ),
-        reply_markup=get_start_kb(is_moderator=is_moderator, is_admin=is_admin)
+    is_moderator = await database.is_moderator(ctx.user_id)
+    is_admin = await database.is_admin(ctx.user_id)
+    is_owner = ctx.user_id in OWNERS_ID
+
+    msg = await ctx.update_message(
+        text=USER_MAIN_MENU_TEXT,
+        reply_markup=get_start_kb(
+            is_moderator=is_moderator,
+            is_admin=is_admin,
+            is_owner=is_owner,
+        )
     )
-    await update_last_message(state, msg)
+    await update_last_message(ctx.db, ctx.user_id, msg)
 
 
-@router.message(Command("cancel"))
-async def handle_cancel_command(message: Message, state: FSMContext):
-    await message.delete()
-    await cancel_appeal_flow(message, state)
+@router.callback_query(F.data.startswith(Callback.UNDERSTAND))
+async def delete_understand_msg(callback: CallbackQuery):
+    await callback.answer()
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
 
 
 @router.callback_query(F.data == Callback.EMPTY)

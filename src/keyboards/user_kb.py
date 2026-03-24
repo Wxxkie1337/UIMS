@@ -1,5 +1,3 @@
-from enum import StrEnum
-
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -8,68 +6,83 @@ from aiogram.types import (
 )
 
 from utils.misc import get_map_url
+from utils.messages import (
+    APPEAL_NEXT,
+    APPEAL_PREV,
+    BACK_BUTTON,
+    CANCEL,
+    CONFIRM,
+    CUSTOM_CATEGORY,
+    DELETE_APPEAL,
+    GOOGLE_MAPS,
+    LOCATION,
+    MAIN_MENU,
+    PAGE_INDICATOR,
+    USER_APPEAL_DETAILS_BUTTON,
+    USER_CATEGORY_OPTIONS,
+    YANDEX_MAPS,
+)
 from keyboards.global_kb import Callback
 
 
-CATEGORIES = [
-    ("🚧 Дороги и тротуары", "Дороги"),
-    ("🗑 Мусор и уборка", "Мусор"),
-    ("💡 Освещение", "Освещение"),
-    ("🚰 Вода / канализация", "Вода"),
-    ("🏠 Дом и подъезд", "Дом"),
-    ("🚗 Парковка", "Парковка"),
-    ("🐕 Животные", "Животные"),
-    ("👥 Соседи / Люди", "Люди"),
-]
-
-
-u_location_kb = ReplyKeyboardMarkup(
-    keyboard=[
+u_info_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
         [
-            KeyboardButton(
-                text="📍 Отправить текущее местоположение",
-                request_location=True,
+            InlineKeyboardButton(
+                text=BACK_BUTTON, callback_data=Callback.U_BACK_TO_APPEAL
             )
         ]
-    ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    ]
 )
 
 
-def get_switch_kb(offset: int, max_appeals: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="⬅️ Назад", callback_data=Callback.APPEAL_PREV
-                ),
-                InlineKeyboardButton(
-                    text=f"📄 {offset}/{max_appeals}", callback_data=Callback.EMPTY
-                ),
-                InlineKeyboardButton(
-                    text="➡️ Вперёд", callback_data=Callback.APPEAL_NEXT
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🗑 Удалить обращение", callback_data=Callback.DELETE_APPEAL
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🏠 В главное меню", callback_data=Callback.MAIN_MENU
-                )
-            ],
+def get_switch_kb(offset: int, max_appeals: int, is_completed: bool) -> InlineKeyboardMarkup:
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                text=APPEAL_PREV, callback_data=Callback.APPEAL_PREV
+            ),
+            InlineKeyboardButton(
+                text=PAGE_INDICATOR.format(current=offset, total=max_appeals),
+                callback_data=Callback.EMPTY,
+            ),
+            InlineKeyboardButton(
+                text=APPEAL_NEXT, callback_data=Callback.APPEAL_NEXT
+            ),
         ]
-    )
+    ]
+
+    if is_completed:
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=USER_APPEAL_DETAILS_BUTTON,
+                    callback_data=Callback.CHECK_INFO,
+                )
+            ]
+        )
+
+    keyboard.extend([
+        [
+            InlineKeyboardButton(
+                text=DELETE_APPEAL, callback_data=Callback.DELETE_APPEAL
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=MAIN_MENU, callback_data=Callback.MAIN_MENU
+            )
+        ],
+    ])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 def get_category_kb(row_size: int = 2) -> InlineKeyboardMarkup:
     keyboard: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
 
-    for text, value in CATEGORIES:
+    for text, value in USER_CATEGORY_OPTIONS:
         row.append(
             InlineKeyboardButton(
                 text=text,
@@ -86,7 +99,7 @@ def get_category_kb(row_size: int = 2) -> InlineKeyboardMarkup:
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="✏️ Свой вариант",
+                text=CUSTOM_CATEGORY,
                 callback_data=Callback.CUSTOM_CATEGORY,
             )
         ]
@@ -101,22 +114,22 @@ def get_finish_kb(latitude: float = None, longitude: float = None) -> InlineKeyb
     if latitude and longitude:
         keyboards.append([
             InlineKeyboardButton(
-                text="🗺 Google Maps",
+                text=GOOGLE_MAPS,
                 url=get_map_url("google", latitude, longitude),
             ),
             InlineKeyboardButton(
-                text="🟡 Яндекс Карты",
+                text=YANDEX_MAPS,
                 url=get_map_url("yandex", latitude, longitude),
             ),
         ])
     
     keyboards.append([
         InlineKeyboardButton(
-            text="❌ Отменить",
+            text=CANCEL,
             callback_data=Callback.CANCEL_CREATE_APPEAL,
         ),
         InlineKeyboardButton(
-            text="✅ Подтвердить",
+            text=CONFIRM,
             callback_data=Callback.SUCCESS_CREATE_APPEAL,
         ),
     ])

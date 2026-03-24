@@ -1,9 +1,10 @@
+from utils.messages import DB_NOT_CONNECTED
+
+
 def ensure_connected(func):
     async def wrapper(self, *args, **kwargs):
         if self._connection is None:
-            raise RuntimeError(
-                "База данных не подключена. Вызовите метод connect() перед использованием."
-            )
+            raise RuntimeError(DB_NOT_CONNECTED)
         return await func(self, *args, **kwargs)
 
     return wrapper

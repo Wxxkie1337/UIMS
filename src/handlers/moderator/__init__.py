@@ -1,7 +1,4 @@
-from aiogram import Router
+from . import actions, menu
+from .shared import router
 
-from .moderator import router as moderator_router
-
-router = Router()
-
-router.include_router(moderator_router)
+__all__ = ("router",)
